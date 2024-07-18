@@ -1,30 +1,41 @@
-﻿import customtkinter as ctk
+import customtkinter as ctk
 from tkinter import PhotoImage
-from PIL import Image, ImageTk
+from PIL import Image
 import requests
 from datetime import datetime
 import speech_recognition as sr
 import threading
 import pyttsx3
 
-# Initialize text-to-speech engine
+
 engine = pyttsx3.init()
-engine.setProperty('rate', 125)  # Slow down the speech
+engine.setProperty('rate', 125)
 
+def fetch_weather(city: str) -> dict:
+    """
+    Fetches the weather data for a given city from OpenWeatherMap API.
 
-# Function to fetch weather data
-def fetch_weather(city):
+    Args:
+        city (str): The city name.
+
+    Returns:
+        dict: The weather data in JSON format.
+    """
     api_key = "49e5d4fb8e31c6f57ee2acc6113d3488"
     url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+
     try:
         response = requests.get(url, timeout=10)
         data = response.json()
-        print(data,response.status_code)
 
         if response.status_code != 200 or "main" not in data:
             display_error(f"Error: {data.get('message', 'City not found or API error')}")
-            return
+            return {}
 
+        return data
+    except requests.exceptions.RequestException as e:
+        display_error(f"Error: {e}")
+        return {}
         temp = data["main"]["temp"]
         condition = data["weather"][0]["description"]
         icon_code = data["weather"][0]["icon"]
@@ -54,7 +65,6 @@ def update_ui(temp, condition, icon_code, wind_speed, humidity, forecast, city):
     wind_label.configure(text=f"Wind: {wind_speed} m/s")
     humidity_label.configure(text=f"Humidity: {humidity}%")
 
-    # Update weather icon
     icon_url = f"http://openweathermap.org/img/wn/{icon_code}@2x.png"
     icon_img = Image.open(requests.get(icon_url, stream=True).raw)
     icon_img = icon_img.resize((100, 100), Image.LANCZOS)
@@ -62,7 +72,6 @@ def update_ui(temp, condition, icon_code, wind_speed, humidity, forecast, city):
     weather_icon_label.configure(image=weather_icon)
     weather_icon_label.image = weather_icon
 
-    # Update forecast
     for i, fc in enumerate(forecast):
         forecast_labels[i].configure(text=f"{fc['time']}: {fc['temp']}°C, {fc['condition']}")
         icon_url = f"http://openweathermap.org/img/wn/{fc['icon']}@2x.png"
@@ -71,7 +80,6 @@ def update_ui(temp, condition, icon_code, wind_speed, humidity, forecast, city):
         forecast_icons[i].configure(image=ImageTk.PhotoImage(icon_img))
         forecast_icons[i].image = ImageTk.PhotoImage(icon_img)
 
-    # Speak the result
     speak_weather_result(city, temp, condition, wind_speed, humidity, forecast)
 
 
@@ -100,7 +108,6 @@ def display_error(message):
     engine.runAndWait()
 
 
-# Function to update time and date
 def update_time_date():
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
@@ -110,31 +117,26 @@ def update_time_date():
     app.after(1000, update_time_date)  # update every second
 
 
-# Function to update weather data periodically
 def update_weather():
     city = city_var.get()
-    print(city)
     if city:
         fetch_weather(city)
-    app.after(600000, update_weather)# update every 10 minutes
+    app.after(600000, update_weather)
 
 
-# Function to add a new city to the dropdown
 def add_city():
     new_city = city_entry.get()
     if new_city and new_city not in city_options:
         city_options.append(new_city)
         city_menu.configure(values=city_options)
-        city_var.set(new_city)  # Set the newly added city as selected
+        city_var.set(new_city)
         update_weather()
 
 
-# Function to change the theme
 def change_theme(theme):
     ctk.set_appearance_mode(theme)
 
 
-# Voice command function
 def voice_command():
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
@@ -160,12 +162,10 @@ def voice_command():
             engine.runAndWait()
 
 
-# Function to handle voice command in a thread
 def start_voice_command():
     threading.Thread(target=voice_command).start()
 
 
-# Function to change text size
 def change_text_size(size):
     for widget in [temperature_label, condition_label, wind_label, humidity_label, time_label, date_label, theme_label,
                    error_label]:
@@ -174,28 +174,22 @@ def change_text_size(size):
         label.configure(font=("Helvetica", size - 8))
 
 
-# Initialize the application
 app = ctk.CTk()
 app.title("Weather Application")
 app.geometry("1024x768")
 
-# Set up a modern theme
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-# Create a main frame to hold everything
 main_frame = ctk.CTkFrame(app, corner_radius=15)
 main_frame.pack(padx=20, pady=20, fill="both", expand=True)
 
-# Create a frame for weather details
 weather_frame = ctk.CTkFrame(main_frame, corner_radius=15)
 weather_frame.grid(row=0, column=0, rowspan=2, padx=20, pady=20, sticky="nsew")
 
-# Background image label
 background_label = ctk.CTkLabel(weather_frame, text="")
 background_label.pack(pady=10)
 
-# Add city input field and dropdown menu for multiple cities
 input_frame = ctk.CTkFrame(main_frame, corner_radius=15)
 input_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
 
@@ -210,7 +204,6 @@ city_menu = ctk.CTkOptionMenu(input_frame, variable=city_var, values=city_option
                               font=("Helvetica", 14))
 city_menu.pack(pady=5)
 
-# Weather data labels
 temperature_label = ctk.CTkLabel(weather_frame, text="N/A", font=("Helvetica", 36))
 temperature_label.pack(pady=10)
 condition_label = ctk.CTkLabel(weather_frame, text="N/A", font=("Helvetica", 18))
@@ -223,7 +216,6 @@ humidity_label.pack(pady=5)
 weather_icon_label = ctk.CTkLabel(weather_frame, text="")
 weather_icon_label.pack(pady=10)
 
-# Forecast labels
 forecast_labels = []
 forecast_icons = []
 for _ in range(3):
@@ -234,13 +226,11 @@ for _ in range(3):
     label.pack(side="left", padx=5)
     forecast_labels.append(label)
 
-# Time and date labels
 time_label = ctk.CTkLabel(main_frame, text="", font=("Helvetica", 24))
 time_label.grid(row=2, column=0, padx=20, pady=10, sticky="w")
 date_label = ctk.CTkLabel(main_frame, text="", font=("Helvetica", 24))
 date_label.grid(row=2, column=0, padx=20, pady=10, sticky="e")
 
-# Voice command button
 voice_command_button = ctk.CTkButton(main_frame, text="Voice Command", command=start_voice_command,
                                      font=("Helvetica", 14))
 voice_command_button.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
@@ -248,28 +238,24 @@ voice_command_button.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
 voice_output_label = ctk.CTkLabel(main_frame, text="", font=("Helvetica", 14))
 voice_output_label.grid(row=3, column=1, padx=20, pady=10, sticky="ew")
 
-# Error label for displaying messages
 error_label = ctk.CTkLabel(main_frame, text="", font=("Helvetica", 14), text_color="red")
 error_label.grid(row=4, column=0, columnspan=2, pady=10)
 
-# Theme selection
 theme_label = ctk.CTkLabel(main_frame, text="Select Theme", font=("Helvetica", 16))
 theme_label.grid(row=5, column=0, padx=20, pady=10, sticky="w")
 theme_menu = ctk.CTkOptionMenu(main_frame, values=["dark", "light"], command=change_theme, width=200, height=30,
                                font=("Helvetica", 14))
 theme_menu.grid(row=5, column=0, padx=20, pady=10, sticky="e")
 
-# Text size slider
 text_size_slider = ctk.CTkSlider(main_frame, from_=12, to=36, number_of_steps=24,
                                  command=lambda size: change_text_size(int(size)))
 text_size_slider.grid(row=6, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
 text_size_label = ctk.CTkLabel(main_frame, text="Text Size", font=("Helvetica", 16))
 text_size_label.grid(row=6, column=0, columnspan=2, padx=20, pady=10, sticky="n")
 
-# Initialize UI elements with default values
 update_time_date()
 fetch_weather(city_options[0])
 update_weather()
 
-# Start the application
+
 app.mainloop()

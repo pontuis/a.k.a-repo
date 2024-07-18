@@ -155,7 +155,8 @@ query = """
         description VARCHAR(100) NOT NULL,
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         alert_temperature FLOAT,
-        alert_description VARCHAR(100)
+        alert_description VARCHAR(100),
+        alert_humidity varchar(100)
     )
 """
 cursor.execute(query)
@@ -167,7 +168,8 @@ query = """
         user_id INT NOT NULL,
         city VARCHAR(50) NOT NULL,
         alert_temperaturethreshold FLOAT NOT NULL,
-        alert_description VARCHAR(100) NOT NULL
+        alert_description VARCHAR(100) NOT NULL,
+         alert_humidity varchar(100)
     )
 """
 cursor.execute(query)
